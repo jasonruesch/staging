@@ -1,0 +1,88 @@
+name: Deploy staging
+
+# Manual only: Actions → Deploy staging → Run workflow, then pick the branch of
+# jasonruesch/pinochle to publish at https://staging.jasonruesch.dev/pinochle/.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or SHA of jasonruesch/pinochle to deploy
+        required: true
+        default: feat/v3.0-portrait
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          path: staging
+
+      - uses: actions/checkout@v6
+        with:
+          repository: jasonruesch/pinochle
+          ref: ${{ inputs.ref }}
+          path: pinochle
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: pinochle/.nvmrc
+          cache: npm
+          cache-dependency-path: pinochle/package-lock.json
+
+      - name: Build
+        working-directory: pinochle
+        run: |
+          npm ci
+          npm run build
+
+      # The site is built for /pinochle/ (Vite base), exactly as in production;
+      # here this repo owns the whole host, so the build goes in a pinochle/
+      # folder, and the host root gets the redirect, robots.txt and the SPA 404.
+      - name: Assemble the staging host
+        run: |
+          mkdir -p _site
+          cp -R staging/root/. _site/
+          cp -R pinochle/dist _site/pinochle
+          cp _site/pinochle/404.html _site/404.html
+
+      # Staging must never compete with production in search, and should never
+      # be mistaken for it: noindex on every page, no sitemap, and a ribbon.
+      # Canonical links still point at production.
+      - name: Mark as staging
+        env:
+          SHA: ${{ inputs.ref }}
+        run: |
+          rm -f _site/pinochle/sitemap.xml
+          find _site -name '*.html' -exec perl -0pi -e '
+            s{<head>}{<head>\n    <meta name="robots" content="noindex, nofollow" />} unless /name="robots"/;
+          ' {} +
+          find _site/pinochle -name '*.html' ! -name 404.html -exec perl -0pi -e '
+            s{</body>}{<div style="position:fixed;z-index:2147483647;top:0;left:50%;transform:translateX(-50%);padding:2px 12px;border-radius:0 0 8px 8px;background:#e8a33d;color:#0b171c;font:600 12px/1.6 system-ui,sans-serif;pointer-events:none">Staging</div></body>};
+          ' {} +
+          echo "Deployed jasonruesch/pinochle@${SHA} ($(git -C pinochle rev-parse --short HEAD))" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: https://staging.jasonruesch.dev/pinochle/
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
