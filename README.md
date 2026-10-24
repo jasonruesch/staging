@@ -21,6 +21,8 @@ disallows everything.
 
 ## DNS
 
-`staging` is a CNAME to `jasonruesch.github.io`, and the domain is verified in
+`staging` is a CNAME to `jasonruesch.dev` (GitHub's Pages check wants the
+account's user-site domain, since `jasonruesch.github.io` uses that custom
+domain), and the domain is verified in
 the account's Pages settings (a `_github-pages-challenge-jasonruesch.staging`
 TXT record).
