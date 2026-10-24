@@ -15,7 +15,7 @@ SHA) of `jasonruesch/pinochle` to publish. Deploys are manual only.
 
 The workflow builds the site exactly as production does (base `/pinochle/`),
 then marks it as staging: `noindex` on every page, no `sitemap.xml`, and a
-small "Staging" ribbon. Canonical links still point at production. `root/`
+full-width "Staging" bar pinned above the site header. Canonical links still point at production. `root/`
 holds the host root: a redirect to `/pinochle/` and a `robots.txt` that
 disallows everything.
 

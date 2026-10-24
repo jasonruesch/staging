@@ -66,8 +66,13 @@ jobs:
           find _site -name '*.html' -exec perl -0pi -e '
             s{<head>}{<head>\n    <meta name="robots" content="noindex, nofollow" />} unless /name="robots"/;
           ' {} +
+          # A full-width bar pinned above the site's sticky header. The bar is fixed
+          # at the top and takes the notch's safe-area inset; the page is padded by
+          # its height, and the header sticks just below it (dropping its own inset
+          # so it isn't doubled). Sticky would scroll away: the page clips overflow.
           find _site/pinochle -name '*.html' ! -name 404.html -exec perl -0pi -e '
-            s{</body>}{<div style="position:fixed;z-index:2147483647;top:0;left:50%;transform:translateX(-50%);padding:2px 12px;border-radius:0 0 8px 8px;background:#e8a33d;color:#0b171c;font:600 12px/1.6 system-ui,sans-serif;pointer-events:none">Staging</div></body>};
+            s{</head>}{<style>:root{--staging-bar:24px}html{scroll-padding-top:calc(5rem + var(--staging-bar) + env(safe-area-inset-top))!important}body{padding-top:calc(var(--staging-bar) + env(safe-area-inset-top))!important}#staging-bar{position:fixed;top:0;left:0;right:0;z-index:60;box-sizing:content-box;height:var(--staging-bar);padding-top:env(safe-area-inset-top);display:flex;align-items:center;justify-content:center;background:#e8a33d;color:#0b171c;font:600 12px/1 system-ui,-apple-system,sans-serif;letter-spacing:.06em;text-transform:uppercase}header.sticky{top:calc(var(--staging-bar) + env(safe-area-inset-top))!important;padding-top:0!important}</style></head>};
+            s{<body>}{<body><div id="staging-bar" role="note">Staging · not the live site</div>};
           ' {} +
           echo "Deployed jasonruesch/pinochle@${SHA} ($(git -C pinochle rev-parse --short HEAD))" >> "$GITHUB_STEP_SUMMARY"
 
